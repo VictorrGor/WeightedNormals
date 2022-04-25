@@ -7,6 +7,8 @@ RenderSys::RenderSys()
 	pSwapChain = nullptr;
 	pRenderTargetView = nullptr;
 	pDepthBuffer = nullptr;
+	mCamera = nullptr;
+	pModelCB = nullptr;
 }
 
 RenderSys::~RenderSys()
@@ -115,7 +117,7 @@ HRESULT RenderSys::Initialize(const HWND& hWnd)
 	cb_ds.ByteWidth = sizeof(CBPerObj);
 	cb_ds.Usage = D3D11_USAGE_DEFAULT;;
 	cb_ds.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	pDevice->CreateBuffer(&cb_ds, NULL, &pModelCB);
+	hRes = pDevice->CreateBuffer(&cb_ds, NULL, &pModelCB);
 
 	return hRes;
 }
@@ -154,6 +156,11 @@ void RenderSys::Release()
 		pDevice->Release();
 		pDevice = nullptr;
 	}
+	if (pModelCB)
+	{
+		pModelCB->Release();
+		pModelCB = nullptr;
+	}
 }
 
 XMVECTOR calcTriangleNormal(const Vertex& _vt1, const Vertex& _vt2, const Vertex& _vt3)
@@ -186,7 +193,6 @@ void calcWeightedNormals(Vertex* _vertices, UINT _vtxCount, const UINT* _indicie
 		vx2 = &_vertices[_indicies[iIdx + 1]];
 		vx3 = &_vertices[_indicies[iIdx + 2]];
 		vNormal = calcTriangleNormal(*vx1, *vx2, *vx3);
-		
 		vBuf = XMLoadFloat3(&vx1->normal);
 		XMStoreFloat3(&vx1->normal, DirectX::XMVectorAdd(vNormal, vBuf));
 		vBuf = XMLoadFloat3(&vx2->normal);
@@ -202,7 +208,7 @@ void calcWeightedNormals(Vertex* _vertices, UINT _vtxCount, const UINT* _indicie
 	{
 		vNormal = XMLoadFloat3(&_vertices[iVtx].normal);
 		vBuf = XMVectorSet(linkCounter[iVtx] , linkCounter[iVtx], linkCounter[iVtx], 1);
-		XMStoreFloat3(&_vertices[iVtx].normal, XMVectorDivide(vNormal, vBuf));
+		XMStoreFloat3(&_vertices[iVtx].normal, XMVector3Normalize(XMVectorDivide(vNormal, vBuf)));
 	}
 	delete[] linkCounter;
 }
@@ -283,6 +289,15 @@ void RenderSys::drawNormals(const Vertex* _vertices, UINT _count)
 
 }
 
+void flipNormals(Vertex* _vertices, UINT _count)
+{
+	for (UINT iVtx = 0; iVtx < _count; ++iVtx)
+	{
+		_vertices[iVtx].normal.x *= -1;
+		_vertices[iVtx].normal.y *= -1;
+		_vertices[iVtx].normal.z *= -1;
+	}
+}
 
 void calcNewTriangle(const Vertex& _up, const Vertex& _left, const Vertex& _right,
 	Vertex& _downW, Vertex& _leftW, Vertex& _rightW)
@@ -467,7 +482,6 @@ void RenderSys::genSphere(UINT tesselation_lvl)
 	tesselateTriangle(pVtxSaved, pIndicesSaved, tesselation_lvl, vertex_count, vertex_lvl, vertex_count * 7);
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
-	//XMVectorSet(R, R, R, R);
 	for (UINT it = 0; it < full_count; ++it)
 	{
 		XMVECTOR v1 = XMLoadFloat3(&pVtx[it].position);
@@ -475,11 +489,12 @@ void RenderSys::genSphere(UINT tesselation_lvl)
 	}
 
 	calcWeightedNormals(pVtx, full_count, pIndices, full_indices_size);
+	//flipNormals(pVtx, full_count);
 	drawNormals(pVtx, full_count);
 	ShaderClass* pShader = new ShaderClass();
 	pShader->Initialize(pDevice, L"shaders/vertexShader.hlsl", L"shaders/pixelShader.hlsl");
 	auto pEnt = createEntity(pVtx, full_count, pIndices, full_indices_size, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST, pShader);
-	//this->objects.push_back(pEnt);
+	this->objects.push_back(pEnt);
 }
 
 
@@ -487,15 +502,13 @@ void RenderSys::Render()
 {
 	const static float ClearColor[4] = { 1.0f, 1.f, 1.f, 1.0f };
 	pDeviceContext->ClearRenderTargetView(pRenderTargetView, ClearColor);
-
+	pDeviceContext->ClearDepthStencilView(pDepthBuffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	static DWORD startTime = GetTickCount();
 	DWORD actualTime = GetTickCount();
 	static float R = 3.;
 	float t = (actualTime - startTime) / 1000.0f;
-	//t = DirectX::XM_PIDIV4;
 	mCamera->setPos({ R * sinf(t) , 2, R * cosf(t) }, { 0, 0, 0 }, { 0, 1, 0 });
-	//mCamera->setPos({ 0.2 , 4, 0 }, { 0, 0, 0 }, { 0, 1, 0 });
 	
 
 	for (std::vector<Entity*>::iterator it = objects.begin(); it != objects.end(); ++it)
@@ -503,7 +516,6 @@ void RenderSys::Render()
 		(*it)->Render(pDeviceContext, *mCamera, nullptr, pModelCB);
 	}
 	pSwapChain->Present(1, 0);
-	pDeviceContext->ClearDepthStencilView(pDepthBuffer, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
 Entity* RenderSys::createEntity(Vertex* _pVx, UINT _vxCount, UINT* _pIndex, UINT _indexCount,
@@ -535,6 +547,7 @@ ID3D11Buffer* RenderSys::createVertexBuffer(Vertex* _mem, UINT _ptCount)
 
 ID3D11Buffer* RenderSys::createIndexBuffer(UINT* _mem, UINT _indexCount)
 {
+	if (!_mem) return nullptr;
 	ID3D11Buffer* res;
 	D3D11_BUFFER_DESC desc;
 	memset(&desc, 0, sizeof(desc));

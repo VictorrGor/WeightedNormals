@@ -12,7 +12,6 @@ typedef DirectX::XMMATRIX mtx;
 #include <queue>
 
 
-
 class Entity;
 class ShaderClass;
 class Camera;
