@@ -418,7 +418,7 @@ void RenderSys::genSphere(UINT tesselation_lvl)
 	
 
 	memset(&pVtx[0], 0, sizeof(Vertex) * full_count);
-	
+
 	pVtxSaved[0].position = { 0, 1, 0 };
 	pVtxSaved[vertex_count - vertex_lvl].position = { 1, 0, -1 };
 	pVtxSaved[vertex_count - 1].position = { 1, 0, 1 };
@@ -444,26 +444,26 @@ void RenderSys::genSphere(UINT tesselation_lvl)
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
 	pVtxSaved[0].position = { 0, -1, 0 };
-	pVtxSaved[vertex_count - vertex_lvl].position = { 1, 0, -1 };
-	pVtxSaved[vertex_count - 1].position = { 1, 0, 1 };
+	pVtxSaved[vertex_count - vertex_lvl].position = { 1, 0, 1 };
+	pVtxSaved[vertex_count - 1].position = { 1, 0, -1 };
 	tesselateTriangle(pVtxSaved, pIndicesSaved, tesselation_lvl, vertex_count, vertex_lvl, vertex_count * 4);
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
 	pVtxSaved[0].position = { 0, -1, 0 };
-	pVtxSaved[vertex_count - vertex_lvl].position = { 1, 0, 1 };
-	pVtxSaved[vertex_count - 1].position = { -1, 0, 1 };
+	pVtxSaved[vertex_count - vertex_lvl].position = { -1, 0, 1 };
+	pVtxSaved[vertex_count - 1].position = { 1, 0, 1 };
 	tesselateTriangle(pVtxSaved, pIndicesSaved, tesselation_lvl, vertex_count, vertex_lvl, vertex_count * 5);
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
 	pVtxSaved[0].position = { 0, -1, 0 };
-	pVtxSaved[vertex_count - vertex_lvl].position = { -1, 0, 1 };
-	pVtxSaved[vertex_count - 1].position = { -1, 0, -1 };
+	pVtxSaved[vertex_count - vertex_lvl].position = { -1, 0, -1 };
+	pVtxSaved[vertex_count - 1].position = { -1, 0, 1 };
 	tesselateTriangle(pVtxSaved, pIndicesSaved, tesselation_lvl, vertex_count, vertex_lvl, vertex_count * 6);
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
 	pVtxSaved[0].position = { 0, -1, 0 };
-	pVtxSaved[vertex_count - vertex_lvl].position = { -1, 0, -1 };
-	pVtxSaved[vertex_count - 1].position = { 1, 0, -1 };
+	pVtxSaved[vertex_count - vertex_lvl].position = { 1, 0, -1 };
+	pVtxSaved[vertex_count - 1].position = { -1, 0, -1 };
 	tesselateTriangle(pVtxSaved, pIndicesSaved, tesselation_lvl, vertex_count, vertex_lvl, vertex_count * 7);
 	pVtxSaved += vertex_count; pIndicesSaved += indices_size;
 
